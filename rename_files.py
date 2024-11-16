@@ -1,6 +1,9 @@
 import os
 import time
+from datetime import datetime
 from pathlib import Path
+from PIL import Image
+from PIL.ExifTags import TAGS
 import re
 
 # 要处理的文件类型，可以按需增加
@@ -17,7 +20,26 @@ def format_timestamp(timestamp):
 def get_earliest_time(file_path):
     creation_time = os.path.getctime(file_path)  # 获取文件创建时间
     modification_time = os.path.getmtime(file_path)  # 获取文件修改时间
-    return min(creation_time, modification_time)  # 返回较早的时间
+    photo_taken_time = get_photo_taken_time(file_path)  # 如果是照片，获取拍摄时间
+    return min(creation_time, modification_time, photo_taken_time)  # 返回较早的时间
+
+
+def get_photo_taken_time(file_path):
+    try:
+        # 打开图片文件
+        image = Image.open(file_path)
+
+        # 提取 EXIF 数据
+        exif_data = image._getexif()
+
+        if exif_data is not None:
+            for tag_id, value in exif_data.items():
+                tag_name = TAGS.get(tag_id, tag_id)
+                if tag_name == "DateTimeOriginal": # 查找拍摄日期字段
+                    return datetime.strptime(value, '%Y:%m:%d %H:%M:%S').timestamp()
+        return datetime.now().timestamp()
+    except Exception as e:
+        return datetime.now().timestamp()
 
 
 # 检查文件是否已经符合重命名格式
