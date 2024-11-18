@@ -9,7 +9,7 @@ import ffmpeg
 from dateutil import parser
 
 # 要处理的文件类型，可以按需增加
-IMG_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif']
+IMG_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', 'webp']
 VID_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv', '.m4v']
 SUPPORTED_EXTENSIONS = [*IMG_EXTENSIONS, *VID_EXTENSIONS]
 
