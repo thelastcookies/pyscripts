@@ -10,6 +10,12 @@ import re
 SUPPORTED_EXTENSIONS = [
     '.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mov', '.avi', '.mkv', '.m4v']
 
+# 格式 YYYYMMDD_HHMMSS_原文件名.扩展名
+TARGET_FILENAME = r'^\d{8}_[\d{6}_]*.*'
+
+# 格式 YYYY_MM_DD_HH_mm_IMG_编号.扩展名
+APPLE_FILENAME = r'^(\d{4})_(\d{2})_(\d{2})_(\d{2})_(\d{2})(_IMG_*.*)'
+
 
 # 格式化时间戳为 YYYYMMDD_HHMMSS
 def format_timestamp(timestamp):
@@ -30,12 +36,12 @@ def get_photo_taken_time(file_path):
         image = Image.open(file_path)
 
         # 提取 EXIF 数据
-        exif_data = image._getexif()
+        exif_data = image.getexif()
 
         if exif_data is not None:
             for tag_id, value in exif_data.items():
                 tag_name = TAGS.get(tag_id, tag_id)
-                if tag_name == "DateTimeOriginal": # 查找拍摄日期字段
+                if tag_name == "DateTimeOriginal":  # 查找拍摄日期字段
                     return datetime.strptime(value, '%Y:%m:%d %H:%M:%S').timestamp()
         return datetime.now().timestamp()
     except Exception as e:
@@ -44,12 +50,14 @@ def get_photo_taken_time(file_path):
 
 # 检查文件是否已经符合重命名格式
 def is_already_renamed(filename):
-    # 正则匹配 YYYYMMDD_HHMMSS_原文件名.扩展名 的格式
-    pattern = r'^\d{8}_\d{6}_.*'
-    return re.match(pattern, filename) is not None
+    return re.match(TARGET_FILENAME, filename) is not None
 
 
-# 重命名文件
+# 检查文件是否是老版 Apple 照片导出命名格式
+def is_apple_namestyle(filename):
+    return re.match(APPLE_FILENAME, filename) is not None
+
+
 def rename_files_in_directory(directory):
     # 遍历目标文件夹中的文件
     for filename in os.listdir(directory):
@@ -70,8 +78,14 @@ def rename_files_in_directory(directory):
             # 获取原始文件名，不包括扩展名
             original_name = Path(filename).stem
 
-            # 构建新的文件名：最早时间_原文件名.扩展名
-            new_filename = f"{formatted_time}_{original_name}{file_extension}"
+            if is_apple_namestyle(Path(filename).stem):
+                # 检查是否是 Apple 导出文件
+                pattern = APPLE_FILENAME
+                new_filename = re.sub(pattern, r"\1\2\3_\4\5\6", filename)
+            else:
+                # 构建新的文件名：最早时间_原文件名.扩展名
+                new_filename = f"{formatted_time}_{original_name}{file_extension}"
+
             new_file_path = os.path.join(directory, new_filename)
 
             # 重命名文件
